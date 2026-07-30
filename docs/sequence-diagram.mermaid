@@ -1,0 +1,54 @@
+sequenceDiagram
+    participant Client
+    participant App as FastAPI App
+    participant Orchestrator
+    participant Streaming
+    participant UsageTracker
+    participant Upstream
+
+    Client->>App: POST /v1/chat/completions
+    App->>App: verify_api_key + rate_limit
+    App->>App: route_request(messages, config, model_name)
+    
+    alt route == "moa"
+        alt stream == false
+            App->>Orchestrator: moa_round(messages, config, params)
+            Orchestrator->>Orchestrator: _gather_references(messages, config, params)
+            Orchestrator->>Upstream: parallel _call_model(ref_models)
+            Upstream-->>Orchestrator: ref_results[]
+            Orchestrator->>Orchestrator: _build_agg_prompt(references, config)
+            Orchestrator->>Upstream: _call_model(aggregator, agg_messages)
+            Upstream-->>Orchestrator: content, usage
+            Orchestrator->>UsageTracker: record(usage, model, route)
+            Orchestrator-->>App: (content, usage)
+        else stream == true
+            App->>Streaming: moa_round_stream(messages, config, params)
+            Streaming->>Orchestrator: _gather_references(messages, config, params)
+            Orchestrator->>Upstream: parallel _call_model(ref_models)
+            Upstream-->>Orchestrator: ref_results[]
+            Orchestrator-->>Streaming: references[]
+            Streaming->>Orchestrator: _build_agg_prompt(references, config)
+            Streaming->>Upstream: client.stream(POST, aggregator)
+            loop SSE chunks
+                Upstream-->>Streaming: chunk
+                Streaming-->>Client: yield chunk
+            end
+        end
+    else route == "passthrough"
+        alt stream == false
+            App->>Orchestrator: passthrough(messages, model_cfg, params)
+            Orchestrator->>Upstream: _call_model(model_cfg, messages)
+            Upstream-->>Orchestrator: content, usage, tool_calls
+            Orchestrator->>UsageTracker: record(usage, model, route)
+            Orchestrator-->>App: (content, usage, tool_calls)
+        else stream == true
+            App->>Streaming: passthrough_stream(messages, model_cfg, params)
+            Streaming->>Upstream: client.stream(POST, model_cfg)
+            loop SSE chunks
+                Upstream-->>Streaming: chunk
+                Streaming-->>Client: yield chunk
+            end
+        end
+    end
+    App->>App: _log_request(model, route, actual_model, prefix, preview)
+    App-->>Client: JSON / SSE response

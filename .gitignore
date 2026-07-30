@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.bak
+*.bak-*
+dist/
+build/
+*.spec
+.moa-gateway/
+*.pyc

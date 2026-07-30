@@ -1,0 +1,19 @@
+# Runtime
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+httpx>=0.27.0
+pyyaml>=6.0
+bcrypt>=4.1.0
+pystray>=0.19.5
+Pillow>=10.2.0
+slowapi>=0.1.9
+python-multipart>=0.0.9
+openpyxl>=3.1          # Excel 日志导出
+requests>=2.31         # 版本更新检查
+pywin32>=306           # Windows DPAPI 密钥加密（仅 Windows）
+cryptography>=42       # 跨平台密钥加密 fallback
+
+# Dev (only for build)
+pyinstaller>=6.5.0
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

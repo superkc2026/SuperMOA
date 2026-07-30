@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOA Gateway 配置</title>
+<style>
+:root {
+  --bg: #f5f5f7; --card: #ffffff; --border: #e4e4e7;
+  --text: #1f2937; --text-muted: #6b7280;
+  --primary: #2563eb; --primary-hover: #1d4ed8;
+  --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+  --code-bg: #f3f4f6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 64px 24px 24px; }
+.container { max-width: 1000px; margin: 0 auto; }
+
+/* 置顶栏 */
+.sticky-header { position: fixed; top: 0; left: 0; right: 0; background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 24px; z-index: 100; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.sticky-header h1 { font-size: 18px; font-weight: 700; margin-right: auto; white-space: nowrap; }
+.sticky-header button, .sticky-header a { padding: 5px 12px; font-size: 13px; border-radius: 4px; cursor: pointer; text-decoration: none; border: none; font-family: inherit; }
+.sticky-header .btn-primary { background: var(--primary); color: white; }
+.sticky-header .btn-success { background: var(--success); color: white; }
+.sticky-header .btn-secondary { background: var(--code-bg); color: var(--text); }
+.sticky-header .btn-demo { background: var(--warning); color: white; }
+
+/* 卡片 */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+.card > summary, .card-static-title { padding: 14px 20px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; user-select: none; list-style: none; }
+.card > summary::-webkit-details-marker { display: none; }
+.card > summary::before { content: "▼"; font-size: 10px; color: var(--text-muted); transition: transform 0.2s; margin-right: 4px; }
+.card:not([open]) > summary::before { transform: rotate(-90deg); }
+.card-body { padding: 0 20px 20px; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: var(--code-bg); color: var(--text-muted); font-weight: normal; }
+.badge.best { background: #ecfdf5; color: var(--success); }
+
+/* 模型配置内部 */
+.model-section { padding: 12px 0; border-bottom: 1px dashed var(--border); }
+.model-section:last-child { border-bottom: none; }
+.model-section-title { font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.reuse-bar { display: flex; gap: 8px; align-items: center; font-size: 12px; margin-bottom: 8px; }
+.reuse-bar select { max-width: 200px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1.5fr 1fr 0.6fr auto; gap: 8px; margin-bottom: 8px; align-items: end; }
+.form-row > div { display: flex; flex-direction: column; }
+.form-row label { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+.form-row .btn-col { display: flex; gap: 4px; flex-direction: row; align-items: center; }
+input, select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-family: inherit; background: white; color: var(--text); outline: none; }
+input:focus, select:focus { border-color: var(--primary); }
+input[type="password"] { font-family: monospace; }
+button { padding: 6px 12px; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; font-family: inherit; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-secondary { background: var(--code-bg); color: var(--text); }
+.btn-secondary:hover { background: #e5e7eb; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-small { padding: 4px 8px; font-size: 12px; }
+.btn-icon { padding: 6px 10px; font-size: 14px; }
+
+.api-key-box { display: flex; flex-direction: column; gap: 10px; }
+.api-key-box .key-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.api-key-box code { background: var(--code-bg); padding: 6px 12px; border-radius: 4px; font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 13px; flex: 1; min-width: 200px; }
+.hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.usage-box { background: var(--code-bg); border-radius: 6px; padding: 12px; font-size: 13px; }
+.usage-box code { background: white; padding: 2px 6px; border-radius: 3px; color: var(--primary); }
+.usage-box p { margin-bottom: 6px; }
+.toast { position: fixed; top: 70px; right: 24px; padding: 12px 20px; border-radius: 6px; color: white; font-size: 14px; z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 350px; }
+.toast.show { opacity: 1; }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.test-result { font-size: 11px; margin-top: 4px; min-height: 16px; padding: 2px 6px; border-radius: 3px; }
+.test-result.ok { color: var(--success); background: #ecfdf5; }
+.test-result.error { color: var(--danger); background: #fef2f2; }
+.test-result.loading { color: var(--warning); }
+.empty-state { text-align: center; padding: 16px; color: var(--text-muted); font-size: 13px; border: 1px dashed var(--border); border-radius: 6px; }
+
+/* MOA 参数 */
+.advanced-note { font-size: 12px; color: var(--success); margin-bottom: 12px; padding: 8px; background: #ecfdf5; border-radius: 4px; }
+
+/* 推荐组合 */
+.combo-card { border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 8px; background: #fafafa; }
+.combo-card .combo-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.combo-card .combo-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+.combo-card .combo-models { font-size: 12px; margin-bottom: 8px; }
+.combo-card .combo-models .role { display: inline-block; padding: 1px 6px; border-radius: 3px; margin-right: 4px; font-size: 11px; }
+.combo-card .combo-models .role.ref { background: #dbeafe; color: #1e40af; }
+.combo-card .combo-models .role.agg { background: #fef3c7; color: #92400e; }
+.combo-card .combo-models .role.pass { background: #d1fae5; color: #065f46; }
+
+/* 演示弹窗 */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; z-index: 999; }
+.modal-overlay.show { display: flex; align-items: center; justify-content: center; }
+.modal { background: white; border-radius: 8px; padding: 24px; max-width: 900px; width: 90%; max-height: 85vh; overflow-y: auto; }
+.modal h2 { margin-bottom: 16px; display: flex; justify-content: space-between; }
+.modal .demo-input { display: flex; gap: 8px; margin-bottom: 16px; }
+.modal .demo-input input { flex: 1; }
+.modal .demo-results { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.modal .demo-col h3 { font-size: 14px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid var(--border); }
+.modal .demo-ref { background: var(--code-bg); padding: 8px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
+.modal .demo-ref .ref-name { font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+.modal .demo-agg { background: #fffbeb; padding: 12px; border-radius: 4px; font-size: 13px; border-left: 3px solid var(--warning); white-space: pre-wrap; }
+.modal .demo-agg .ref-name { font-weight: 600; color: var(--primary); margin-bottom: 6px; }
+.modal .demo-ref { white-space: pre-wrap; }
+
+/* 更新提示横幅 */
+.update-banner { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 24px; display: none; align-items: center; gap: 12px; font-size: 14px; }
+.update-banner.show { display: flex; }
+.update-banner .banner-text { flex: 1; }
+.update-banner button { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 4px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.update-banner button:hover { background: rgba(255,255,255,0.35); }
+
+/* Profile 选择器 */
+.profile-bar { display: flex; align-items: center; gap: 4px; }
+.profile-bar select { max-width: 130px; font-size: 12px; padding: 4px 6px; }
+.profile-bar button { padding: 4px 8px; font-size: 12px; }
+.header-divider { color: var(--border); margin: 0 2px; font-size: 16px; }
+.health-light { font-size: 14px; cursor: pointer; line-height: 1; }
+
+/* 用量统计表格 */
+.usage-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.usage-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+.usage-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.usage-table tr.total-row { font-weight: 700; background: var(--code-bg); }
+.usage-table tr.total-row td { border-top: 2px solid var(--border); border-bottom: none; }
+
+/* 错误上报开关 */
+.error-reporting-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 12px; background: var(--code-bg); border-radius: 6px; }
+.error-reporting-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.error-reporting-row label { font-size: 13px; cursor: pointer; user-select: none; }
+
+/* 首启引导向导 */
+.wizard-step { display: none; }
+.wizard-step.active { display: block; }
+.wizard-progress { display: flex; gap: 8px; margin-bottom: 20px; }
+.wizard-progress .step { flex: 1; text-align: center; padding: 8px; border-radius: 4px; font-size: 12px; background: var(--code-bg); color: var(--text-muted); }
+.wizard-progress .step.active { background: var(--primary); color: white; }
+.wizard-progress .step.done { background: var(--success); color: white; }
+.wizard-combo-card { border: 2px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s; }
+.wizard-combo-card:hover { border-color: var(--primary); }
+.wizard-combo-card.selected { border-color: var(--primary); background: #eff6ff; }
+.wizard-nav { display: flex; justify-content: space-between; margin-top: 20px; }
+.wizard-info-box { background: var(--code-bg); border-radius: 6px; padding: 12px; margin: 8px 0; }
+.wizard-info-box p { margin-bottom: 6px; }
+.wizard-info-box code { background: white; padding: 4px 8px; border-radius: 3px; font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- 更新提示横幅 -->
+<div class="update-banner" id="updateBanner">
+  <span class="banner-text" id="updateBannerText"></span>
+  <button onclick="viewUpdateDetails()">查看详情</button>
+  <button onclick="downloadUpdate()">下载</button>
+  <button onclick="dismissUpdate()">稍后提醒</button>
+</div>
+
+<!-- 置顶栏 -->
+<div class="sticky-header">
+  <span id="healthLight" class="health-light" title="健康检查：加载中">🟡</span>
+  <h1>SuperMOA</h1>
+  <div class="profile-bar">
+    <select id="profileSelect" onchange="switchProfile()" title="方案切换"><option value="default">默认</option></select>
+    <button class="btn-secondary btn-small" onclick="saveNewProfile()" title="保存为新方案">💾</button>
+    <button class="btn-secondary btn-small" onclick="deleteProfile()" title="删除方案">🗑</button>
+  </div>
+  <span class="header-divider">|</span>
+  <button class="btn-demo" onclick="runDemo()">🎮 体验MOA</button>
+  <button class="btn-secondary" onclick="openLogs()">📋 调用记录</button>
+  <span class="header-divider">|</span>
+  <button class="btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入</button>
+  <button class="btn-secondary" onclick="exportConfig()">📤 导出</button>
+  <span class="header-divider">|</span>
+  <button class="btn-success" onclick="saveConfig()">💾 保存</button>
+  <input type="file" id="importFile" accept=".yaml,.yml" style="display:none;" onchange="importConfig(event)">
+</div>
+
+<div class="container">
+
+  <!-- 模型配置（默认展开） -->
+  <details class="card" open id="modelConfigCard">
+    <summary>模型配置 <span class="badge">参考模型 + 聚合模型 + 透传模型</span></summary>
+    <div class="card-body">
+      <div class="model-section">
+        <div class="model-section-title">
+          参考模型（2-3 个，并行调用做参谋）
+          <div style="display:flex;gap:4px;">
+            <button class="btn-secondary btn-small" onclick="testAll()">🔍 测试全部</button>
+            <button class="btn-secondary btn-small" onclick="addReference()">+ 添加</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-bottom:8px;">参考模型：并行调用，各出主意（2-5 个）</div>
+        <div id="referenceList"></div>
+      </div>
+      <div class="model-section">
+        <div class="model-section-title">聚合模型（综合参考结果给最终答案）</div>
+        <div class="hint" style="margin-bottom:8px;">聚合模型：综合参考结果，给出最终答案（1 个）</div>
+        <div id="aggReuseBar" class="reuse-bar" style="display:none;">
+          <span>一键复用：</span>
+          <select id="aggReuseSelect" onchange="reuseRef('agg', this.value)"><option value="">— 选择参考模型 —</option></select>
+        </div>
+        <div id="aggregatorForm"></div>
+      </div>
+      <div class="model-section">
+        <div class="model-section-title">默认透传模型（可选，不配则所有请求走 MOA）</div>
+        <div class="hint" style="margin-bottom:8px;">透传模型：无触发词时直接调用（可选，省时省钱）</div>
+        <div id="passReuseBar" class="reuse-bar" style="display:none;">
+          <span>一键复用：</span>
+          <select id="passReuseSelect" onchange="reuseRef('pass', this.value)"><option value="">— 选择参考模型 —</option></select>
+        </div>
+        <div id="passthroughForm"></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- MOA 参数（默认折叠） -->
+  <details class="card">
+    <summary>MOA 参数（高级） <span class="badge best">✓ 已按最佳配置</span></summary>
+    <div class="card-body">
+      <div class="advanced-note">已为您按照最佳信息配置，有进阶需求可人工修改</div>
+      <div class="form-row" style="grid-template-columns: repeat(4, 1fr);">
+        <div><label>参考温度 (0.7 多样性最佳)</label><input type="number" id="moaRefTemp" step="0.1" min="0" max="2"></div>
+        <div><label>参考 max_tokens (2048 够用)</label><input type="number" id="moaRefMaxTokens" min="100"></div>
+        <div><label>参考超时(秒)</label><input type="number" id="moaRefTimeout" min="5"></div>
+        <div><label>聚合超时(秒)</label><input type="number" id="moaAggTimeout" min="10"></div>
+      </div>
+      <div class="form-row" style="grid-template-columns: repeat(3, 1fr); margin-top: 8px;">
+        <div><label>失败策略</label><select id="moaDegraded"><option value="loud">loud（告知聚合有失败）</option><option value="silent">silent（静默跳过）</option></select></div>
+        <div><label>context 截断</label><input type="number" id="moaMaxCtx" min="1"></div>
+        <div><label>流式输出</label><select id="moaStream"><option value="true">启用</option><option value="false">禁用</option></select></div>
+      </div>
+      <div class="error-reporting-row">
+        <input type="checkbox" id="errorReportingToggle" onchange="toggleErrorReporting()">
+        <label for="errorReportingToggle">错误上报（opt-in，仅本地存储脱敏堆栈）</label>
+      </div>
+    </div>
+  </details>
+
+  <!-- API Key + 用法（合并，可折叠，默认展开） -->
+  <details class="card" open>
+    <summary>API Key + 用法 <span class="badge">接入指南</span></summary>
+    <div class="card-body">
+      <div class="api-key-box">
+        <div class="key-row"><label style="font-size:11px;color:var(--text-muted);">API Key</label><br><code id="apiKey">加载中...</code><button class="btn-secondary btn-small" onclick="copyKey()">复制</button><button class="btn-secondary btn-small" onclick="toggleKeyVisibility()">显示/隐藏</button><button class="btn-danger btn-small" onclick="regenerateKey()">重新生成</button></div>
+        <div class="key-row"><label style="font-size:11px;color:var(--text-muted);">Base URL</label><br><code id="baseUrlHint">http://127.0.0.1:12345/v1</code><button class="btn-secondary btn-small" onclick="copyBaseUrl()">复制</button></div>
+      </div>
+      <div class="hint">智能体配置时 Base URL 填上面的地址，API Key 填上面的 Key 作为 Authorization: Bearer</div>
+      <div class="usage-box" style="margin-top:12px;" id="usageBox">
+        <!-- 动态生成 -->
+      </div>
+    </div>
+  </details>
+
+  <!-- 用量统计 -->
+  <details class="card" id="usageStatsCard">
+    <summary>用量统计 <span class="badge">近 7 天</span></summary>
+    <div class="card-body">
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn-secondary btn-small" onclick="loadUsage()">🔄 刷新</button>
+        <button class="btn-secondary btn-small" onclick="exportUsageCsv()">📥 导出 CSV</button>
+      </div>
+      <div id="usageTable">点击「刷新」加载数据</div>
+    </div>
+  </details>
+
+  <!-- 推荐组合（最底部） -->
+  <details class="card" open>
+    <summary>推荐组合 <span class="badge">国内模型为主，含参考价格</span></summary>
+    <div class="card-body">
+      <div id="combosList">加载中...</div>
+      <div class="hint" style="margin-top:8px;">价格单位：元/百万 token（人民币），参考价格（2026-07），以厂商官网为准</div>
+    </div>
+  </details>
+
+</div>
+
+<!-- 调用记录弹窗 -->
+<div class="modal-overlay" id="logsModal">
+  <div class="modal">
+    <h2>📋 调用记录 <div style="float:right;display:flex;gap:4px;"><button class="btn-secondary btn-small" onclick="exportLogs('xlsx')">📊 Excel</button><button class="btn-secondary btn-small" onclick="exportLogs('md')">📝 MD</button><button class="btn-secondary btn-small" onclick="closeLogs()">关闭</button></div></h2>
+    <div id="logsContent" style="font-size:12px;max-height:60vh;overflow-y:auto;">加载中...</div>
+  </div>
+</div>
+
+<!-- 演示弹窗 -->
+<div class="modal-overlay" id="demoModal">
+  <div class="modal">
+    <h2>🎮 MOA 效果体验 <button class="btn-secondary btn-small" onclick="closeDemo()">关闭</button></h2>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">输入一个问题，看参考模型各自回答，再由聚合模型综合 + 标注引用来源。⚠️ 每次演示消耗真实 API 额度（约 4 次调用）。</p>
+    <div class="demo-input">
+      <input type="text" id="demoPrompt" value="用一句话解释什么是量子计算，让小学生都能懂" placeholder="输入问题...">
+      <button class="btn-primary" onclick="executeDemo()" id="demoRunBtn">运行</button>
+    </div>
+    <div id="demoLoading" style="text-align:center;padding:40px;color:var(--text-muted);display:none;">⏳ 正在调用参考模型 + 聚合模型，请稍候（约 10-30 秒）...</div>
+    <div id="demoResults" class="demo-results" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- 首启引导向导 -->
+<div class="modal-overlay" id="wizardModal">
+  <div class="modal" style="max-width:700px;">
+    <h2>🚀 SuperMOA 首次配置向导</h2>
+    <div class="wizard-progress" id="wizardProgress">
+      <div class="step active" id="wizardStep1Indicator">1. 选择组合</div>
+      <div class="step" id="wizardStep2Indicator">2. 填写 Key</div>
+      <div class="step" id="wizardStep3Indicator">3. 完成</div>
+    </div>
+    <div class="wizard-step active" id="wizardStep0">
+      <div style="padding:8px 0;">
+        <h3 style="font-size:16px;margin-bottom:16px;color:var(--primary);">💡 SuperMOA 是什么？</h3>
+        <div style="background:var(--code-bg);border-radius:8px;padding:16px;margin-bottom:16px;line-height:1.8;font-size:14px;">
+          <p style="margin-bottom:12px;">SuperMOA 就像一个<strong>智囊团</strong>：</p>
+          <p style="margin-bottom:8px;">🧠 <strong>参考模型</strong>（2-5 个军师）——并行调用，各自独立思考，各出主意</p>
+          <p style="margin-bottom:8px;">🎯 <strong>聚合模型</strong>（1 个统帅）——综合所有军师的意见，给出最终答案</p>
+          <p style="margin-bottom:0;">⚡ <strong>透传模式</strong>——直接找一个军师问，快但单一，适合简单问题（省时省钱）</p>
+        </div>
+        <p style="color:var(--text-muted);font-size:13px;">点击「我知道了」开始配置你的智囊团。</p>
+      </div>
+    </div>
+    <div class="wizard-step" id="wizardStep1">
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">选择一个推荐模型组合，后续可随时修改：</p>
+      <div id="wizardCombos">加载中...</div>
+    </div>
+    <div class="wizard-step" id="wizardStep2">
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">为各模型填写 API Key，可逐个测试连通性：</p>
+      <div id="wizardKeyInputs"></div>
+    </div>
+    <div class="wizard-step" id="wizardStep3">
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">配置完成！以下是接入信息：</p>
+      <div id="wizardCompleteInfo"></div>
+    </div>
+    <div class="wizard-nav">
+      <button class="btn-secondary" onclick="closeWizard()" id="wizardCancelBtn">跳过</button>
+      <div>
+        <button class="btn-secondary" onclick="wizardPrev()" id="wizardPrevBtn" style="display:none;">上一步</button>
+        <button class="btn-primary" onclick="wizardNext()" id="wizardNextBtn">我知道了</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

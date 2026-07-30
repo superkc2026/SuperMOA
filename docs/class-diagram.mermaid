@@ -1,0 +1,120 @@
+classDiagram
+    class Constants {
+        +int MAX_LOGS
+        +int RATE_LIMIT_WINDOW
+        +int RATE_LIMIT_MAX_REQUESTS
+        +int CHECK_INTERVAL
+        +int DEFAULT_PORT
+        +str BRAND_NAME
+        +str API_PREFIX
+    }
+
+    class ConfigManager {
+        +Path CONFIG_DIR
+        +Path CONFIG_FILE
+        +load_config() dict
+        +save_config(config: dict)
+        +ensure_config() bool
+        +validate_config(config: dict) list
+        +normalize_config(config: dict) dict
+        +is_first_run() bool
+        +_merge_defaults(data: dict) dict
+    }
+
+    class AuthManager {
+        +Path KEY_FILE
+        +Path KEY_HASH_FILE
+        +generate_api_key() str
+        +ensure_api_key() str
+        +verify_api_key(authorization: str) bool
+        +regenerate_api_key() str
+        +mask_key(key: str) str
+        +get_current_key() str
+        +check_rate_limit(client_ip: str) tuple
+        +_encrypt_key(key: str) str
+        +_decrypt_key(encrypted: str) str
+    }
+
+    class Orchestrator {
+        +route_request(messages, config, model_name) Tuple
+        +moa_round(messages, config, client_params) Tuple~str, dict~
+        +passthrough(messages, model_cfg, client_params) Tuple
+        +call_model(client, model_cfg, messages, temp, max_tokens, extra) Tuple
+        +_gather_references(messages, config, client_params) list
+        +_build_agg_prompt(references, config, truncated) list
+        +_truncate_context(messages, max_messages) list
+    }
+
+    class Streaming {
+        +moa_round_stream(messages, config, client_params) AsyncGenerator
+        +passthrough_stream(messages, model_cfg, client_params) AsyncGenerator
+        +_fake_sse(content, model) str
+        +_error_sse(status, message) str
+    }
+
+    class LogManager {
+        +list _request_logs
+        +Path _LOG_FILE
+        +log_request(model, route, actual_model, prefix, preview, client)
+        +load_logs() list
+        +export_logs(format: str) bytes
+        +_rotate_log()
+        +_dedup_check(entry) bool
+    }
+
+    class UsageTracker {
+        +Path DB_PATH
+        +record(usage: dict, model: str, route: str, client: str)
+        +get_daily_summary(days: int) dict
+        +get_model_breakdown(days: int) dict
+        +_calc_cost(usage: dict, model_cfg: dict) float
+    }
+
+    class HealthModule {
+        +dict _health_status
+        +start_background_check(config_loader)
+        +stop_background_check()
+        +is_model_healthy(name: str) bool
+        +get_health_status() dict
+        +clear_health_status()
+        +_check_all_models(config: dict)
+        +_ping_model(model_cfg: dict) tuple
+    }
+
+    class ProfileManager {
+        +list profiles
+        +str current_profile
+        +load_profile(name: str) dict
+        +save_profile(name: str, config: dict)
+        +list_profiles() list
+        +switch_profile(name: str)
+        +delete_profile(name: str)
+    }
+
+    class Updater {
+        +str VERSION
+        +str CHECK_URL
+        +check_latest_version() str
+        +is_update_available() bool
+        +download_update() str
+    }
+
+    class AppFactory {
+        +create_app() FastAPI
+        +startup_event()
+        +shutdown_event()
+        +run_server(host, port)
+    }
+
+    Orchestrator ..> ConfigManager : reads config
+    Orchestrator ..> HealthModule : checks health
+    Orchestrator ..> UsageTracker : records usage
+    Streaming ..> Orchestrator : calls _gather_references, _build_agg_prompt
+    Streaming ..> UsageTracker : records usage
+    AppFactory ..> Orchestrator : routes to
+    AppFactory ..> Streaming : routes to
+    AppFactory ..> LogManager : logs requests
+    AppFactory ..> AuthManager : verifies key
+    AppFactory ..> ConfigManager : loads config
+    ProfileManager ..> ConfigManager : manages profiles
+    Updater ..> Constants : reads version
