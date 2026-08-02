@@ -1,0 +1,37 @@
+# Gitleaks 密钥检测配置
+# 用法: gitleaks detect --config=.gitleaks.toml --source .
+# 安装: https://github.com/gitleaks/gitleaks/releases
+
+title = "SuperMOA Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supermoa-api-key"
+description = "SuperMOA API Key"
+regex = '''sk-moa-[a-f0-9]{32}'''
+tags = ["key", "supermoa"]
+
+[[rules]]
+id = "github-token"
+description = "GitHub Personal Access Token"
+regex = '''ghp_[a-zA-Z0-9]{36}'''
+tags = ["key", "github"]
+
+[[rules]]
+id = "deepseek-api-key"
+description = "DeepSeek API Key"
+regex = '''sk-[a-f0-9]{32}'''
+tags = ["key", "deepseek"]
+
+[allowlist]
+description = "Allowed paths"
+paths = [
+  '''node_modules/.*''',
+  '''\.venv/.*''',
+  '''dist/.*''',
+  '''build/.*''',
+  '''\.git/.*''',
+  '''tests/.*''',  # 测试用 mock key
+]

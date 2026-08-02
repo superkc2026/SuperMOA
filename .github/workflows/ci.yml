@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller semgrep
+
+      - name: Syntax check
+        run: |
+          python -c "
+          import py_compile, os
+          for root, dirs, files in os.walk('.'):
+              if '.venv' in root or '__pycache__' in root or '.git' in root:
+                  continue
+              for f in files:
+                  if f.endswith('.py'):
+                      path = os.path.join(root, f)
+                      py_compile.compile(path, doraise=True)
+          print('All Python files OK')
+          "
+
+      - name: Run smoke tests
+        run: |
+          python tests/test_smoke.py
+
+      - name: Run trigger tests
+        run: |
+          python tests/test_triggers.py
+
+      - name: Semgrep SAST scan
+        run: |
+          semgrep --config=.semgrep.yml --error .
+
+      - name: Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

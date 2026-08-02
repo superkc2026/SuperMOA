@@ -1,0 +1,14 @@
+# Trivy 依赖漏洞扫描配置
+# 用法: trivy fs --ignore-unfixed .
+# 安装: https://aquasecurity.github.io/trivy/
+
+# 扫描 requirements.txt 的 Python 依赖
+# 扫描 .venv 里的已安装包
+# 忽略未修复的漏洞（只报有补丁的）
+
+[severity]
+type = "OS,LIBRARY"
+ignore-unfixed = true
+
+[vulnerability]
+ignore-unfixed = true

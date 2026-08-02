@@ -1,0 +1,64 @@
+# Semgrep SAST 扫描配置
+# 用法: semgrep --config=.semgrep.yml .
+# 安装: pip install semgrep
+
+rules:
+  # 硬编码密钥检测
+  - id: hardcoded-api-key
+    pattern: |
+      "$SK"
+    metavariable-regex:
+      metavariable: $SK
+      regex: 'sk-[a-zA-Z0-9]{20,}'
+    message: "检测到硬编码 API Key"
+    severity: ERROR
+    languages: [python]
+
+  # SQL 注入
+  - id: sql-injection
+    pattern: |
+      $CUR.execute($QUERY + $VAR)
+    message: "可能的 SQL 注入"
+    severity: ERROR
+    languages: [python]
+
+  # 命令注入
+  - id: command-injection
+    pattern: |
+      os.system($CMD + $VAR)
+    message: "可能的命令注入"
+    severity: ERROR
+    languages: [python]
+
+  # 裸 except
+  - id: bare-except
+    pattern: |
+      except:
+          pass
+    message: "禁止裸 except: pass，应捕获具体异常"
+    severity: WARNING
+    languages: [python]
+
+  # 不安全的 pickle
+  - id: insecure-pickle
+    pattern: |
+      pickle.loads($DATA)
+    message: "pickle.loads 不安全，可能反序列化攻击"
+    severity: WARNING
+    languages: [python]
+
+  # XSS: innerHTML 未转义
+  - id: xss-innerhtml
+    pattern: |
+      $EL.innerHTML = $VAR
+    message: "innerHTML 可能导致 XSS，请使用 textContent 或转义"
+    severity: WARNING
+    languages: [javascript]
+
+  # 不安全的 YAML 加载
+  - id: insecure-yaml-load
+    pattern: |
+      yaml.load($DATA)
+    message: "使用 yaml.safe_load 替代 yaml.load"
+    severity: WARNING
+    languages: [python]

@@ -3,8 +3,14 @@
 统一异常体系，禁止裸 except: pass，所有 except 均应捕获具体异常并记日志。
 """
 import logging
+import time
+from typing import Optional
 
 logger = logging.getLogger("supermoa")
+
+# 安全审计日志（独立于调用日志，记录敏感操作）
+_audit_log: list = []
+_MAX_AUDIT = 200
 
 
 class SuperMOAError(Exception):
@@ -106,3 +112,49 @@ def friendly_error_message(raw_message: str, status_code: int = 0) -> str:
 
     # 通用降级：截断后返回
     return raw_message[:200] if len(raw_message) > 200 else raw_message
+
+
+# ============================================================
+# 统一错误响应格式
+# ============================================================
+
+def error_response(code: int, message: str, error_type: str = "error") -> dict:
+    """统一错误响应格式：{error: {code, message, type}}
+
+    Args:
+        code: HTTP 状态码或自定义错误码
+        message: 用户友好的错误消息
+        error_type: 错误类型（auth_error/rate_limit/upstream_error/invalid_request/config_error/not_found）
+    Returns:
+        dict: {"error": {"code": code, "message": message, "type": error_type}}
+    """
+    return {"error": {"code": code, "message": message, "type": error_type}}
+
+
+# ============================================================
+# 安全审计日志
+# ============================================================
+
+def audit_log(action: str, detail: str = "", client: str = "") -> None:
+    """记录安全审计日志（敏感操作）
+
+    Args:
+        action: 操作类型（regenerate_key/export_config/import_config/toggle_error_reporting/delete_profile/switch_profile）
+        detail: 操作详情
+        client: 客户端标识
+    """
+    entry = {
+        "ts": time.time(),
+        "action": action,
+        "detail": detail[:200],
+        "client": client[:50],
+    }
+    _audit_log.append(entry)
+    if len(_audit_log) > _MAX_AUDIT:
+        _audit_log.pop(0)
+    logger.info("[AUDIT] %s: %s (client=%s)", action, detail[:100], client[:30])
+
+
+def get_audit_logs(limit: int = 50) -> list:
+    """获取安全审计日志"""
+    return _audit_log[-limit:]

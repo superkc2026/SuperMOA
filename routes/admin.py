@@ -166,10 +166,12 @@ async def api_save_config(body: dict):
 async def api_export_config():
     """导出配置文件（api_key 已脱敏）"""
     from app import _mask_config
+    from engine.exceptions import audit_log
     import yaml as _yaml
     config = load_config()
     masked = _mask_config(config)
     content = _yaml.dump(masked, allow_unicode=True, sort_keys=False, default_flow_style=False)
+    audit_log("export_config", "导出配置（已脱敏）")
     return Response(
         content=content,
         media_type="application/x-yaml",
@@ -180,20 +182,15 @@ async def api_export_config():
 @router.post("/api/config/import")
 async def api_import_config(body: dict):
     """导入配置"""
+    from engine.exceptions import audit_log, error_response
     import yaml
     yaml_text = body.get("yaml", "")
     if not yaml_text:
-        return JSONResponse(
-            {"error": {"message": "yaml 内容为空", "type": "invalid_request", "code": 400}},
-            status_code=400,
-        )
+        return JSONResponse(error_response(400, "yaml 内容为空", "invalid_request"), status_code=400)
     try:
         data = yaml.safe_load(yaml_text) or {}
     except yaml.YAMLError as e:
-        return JSONResponse(
-            {"error": {"message": f"YAML 解析失败: {str(e)[:200]}", "type": "parse_error", "code": 400}},
-            status_code=400,
-        )
+        return JSONResponse(error_response(400, f"YAML 解析失败: {str(e)[:200]}", "parse_error"), status_code=400)
 
     merged = _merge_defaults(data)
     merged = normalize_config(merged)
@@ -206,6 +203,7 @@ async def api_import_config(body: dict):
         )
 
     save_config(merged)
+    audit_log("import_config", "导入配置覆盖")
     try:
         health_module.clear_health_status()
     except Exception as e:
@@ -390,6 +388,8 @@ async def api_get_key():
 @router.post("/api/regenerate-key")
 async def api_regenerate_key():
     new_key = regenerate_api_key()
+    from engine.exceptions import audit_log
+    audit_log("regenerate_key", "API Key 重新生成")
     return {"key": new_key, "masked": mask_key(new_key)}
 
 
@@ -504,10 +504,9 @@ async def api_switch_profile(body: dict):
         )
     ok = switch_profile(name)
     if not ok:
-        return JSONResponse(
-            {"error": {"message": f"Profile '{name}' 不存在", "type": "not_found", "code": 404}},
-            status_code=404,
-        )
+        return JSONResponse(error_response(404, f"方案 '{name}' 不存在", "not_found"), status_code=404)
+    from engine.exceptions import audit_log
+    audit_log("switch_profile", f"切换到方案: {name}")
     # 切换后清空健康状态
     try:
         health_module.clear_health_status()
@@ -534,15 +533,18 @@ async def api_save_profile(body: dict):
 async def api_delete_profile(name: str):
     """删除指定 Profile"""
     from engine.profiles import delete_profile, get_active_profile
+    from engine.exceptions import error_response, audit_log
     if name == get_active_profile():
-        return JSONResponse(
-            {"error": {"message": "不能删除当前激活的 Profile", "type": "conflict", "code": 409}},
-            status_code=409,
-        )
+        return JSONResponse(error_response(409, "不能删除当前激活的方案", "conflict"), status_code=409)
     ok = delete_profile(name)
     if not ok:
-        return JSONResponse(
-            {"error": {"message": f"Profile '{name}' 不存在", "type": "not_found", "code": 404}},
-            status_code=404,
-        )
-    return {"status": "ok", "message": f"已删除 Profile '{name}'"}
+        return JSONResponse(error_response(404, f"方案 '{name}' 不存在", "not_found"), status_code=404)
+    audit_log("delete_profile", f"删除方案: {name}")
+    return {"status": "ok", "message": f"已删除方案 '{name}'"}
+
+
+@router.get("/api/audit-logs")
+async def api_audit_logs():
+    """获取安全审计日志"""
+    from engine.exceptions import get_audit_logs
+    return {"logs": get_audit_logs(50)}
